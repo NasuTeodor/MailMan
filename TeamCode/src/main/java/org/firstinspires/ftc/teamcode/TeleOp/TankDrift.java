@@ -11,6 +11,8 @@ public class TankDrift extends LinearOpMode {
     DcMotor left, right;
     VoltageSensor voltageSensor;
 
+    Thread arm_rise, arm_lower, arm_stop;
+
     double lp, rp = 0;
     double l_joystick, r_joystick = 0;
     double l_trigger, r_trigger = 0;
@@ -31,7 +33,7 @@ public class TankDrift extends LinearOpMode {
 
             update();
 
-            while(l_joystick != 0 || r_joystick != 0 ){
+            if(l_joystick != 0 || r_joystick != 0 ){
                 update();
                 drive = -l_joystick;
                 turn  =  r_joystick;
@@ -49,12 +51,12 @@ public class TankDrift extends LinearOpMode {
                 power(left, right);
             }
 
-            while(l_trigger != 0 || r_trigger != 0) {
+            if(l_trigger != 0 || r_trigger != 0) {
                 power(l_trigger, r_trigger);
                 update();
             }
 
-            while( l_bumper || r_bumper) {
+            if( l_bumper || r_bumper) {
                 update();
                 if (r_bumper)
                     rotate(true);
@@ -63,9 +65,9 @@ public class TankDrift extends LinearOpMode {
             }
 
 
-            while(gamepad1.dpad_up)
+            if(gamepad1.dpad_up)
                 power(move_power,move_power);
-            while(gamepad1.dpad_down)
+            if(gamepad1.dpad_down)
                 power(-move_power, -move_power);
 
 //            OPRESTE TOATE MOTOARELE DACA NIMIC NU ESTE ACTIONAT
