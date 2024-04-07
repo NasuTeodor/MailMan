@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.TeleOp;
 
+import static org.firstinspires.ftc.teamcode.TeleOp.ThreadHandler.*;
+
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -29,57 +31,60 @@ public class TankDrift extends LinearOpMode {
 
         waitForStart();
 
-        while(opModeIsActive()){
+        while (opModeIsActive()) {
 
             update();
 
-            if(l_joystick != 0 || r_joystick != 0 ){
-                update();
-                drive = -l_joystick;
-                turn  =  r_joystick;
+            if (!FOUND) {
 
-                left  = drive + turn;
-                right = drive - turn;
+                if (l_joystick != 0 || r_joystick != 0) {
+                    update();
+                    drive = -l_joystick;
+                    turn = r_joystick;
 
-                double max = Math.max(Math.abs(left), Math.abs(right));
-                if (max > 1.0)
-                {
-                    left /= max;
-                    right /= max;
+                    left = drive + turn;
+                    right = drive - turn;
+
+                    double max = Math.max(Math.abs(left), Math.abs(right));
+                    if (max > 1.0) {
+                        left /= max;
+                        right /= max;
+                    }
+
+                    power(left, right);
                 }
 
-                power(left, right);
+                if (l_trigger != 0 || r_trigger != 0) {
+                    power(l_trigger, r_trigger);
+                    update();
+                }
+
+                if (l_bumper || r_bumper) {
+                    update();
+                    if (r_bumper)
+                        rotate(true);
+                    else if (l_bumper)
+                        rotate(false);
+                }
+
+
+                if (gamepad1.dpad_up)
+                    power(move_power, move_power);
+                if (gamepad1.dpad_down)
+                    power(-move_power, -move_power);
+
             }
-
-            if(l_trigger != 0 || r_trigger != 0) {
-                power(l_trigger, r_trigger);
-                update();
-            }
-
-            if( l_bumper || r_bumper) {
-                update();
-                if (r_bumper)
-                    rotate(true);
-                else if (l_bumper)
-                    rotate(false);
-            }
-
-
-            if(gamepad1.dpad_up)
-                power(move_power,move_power);
-            if(gamepad1.dpad_down)
-                power(-move_power, -move_power);
 
 //            OPRESTE TOATE MOTOARELE DACA NIMIC NU ESTE ACTIONAT
 //            OPRESTE TOT DACA APESI PE A
 
-            if(gamepad1.a)
+            if (gamepad1.a)
                 stopMotor();
-            if(
+            if (
                     !l_bumper && !r_bumper
-                    && l_joystick == 0 && r_joystick == 0
-                    && l_trigger == 0 && r_trigger == 0
-                    && !gamepad1.dpad_down && !gamepad1.dpad_up
+                            && l_joystick == 0 && r_joystick == 0
+                            && l_trigger == 0 && r_trigger == 0
+                            && !gamepad1.dpad_down && !gamepad1.dpad_up
             )
                 stopMotor();
 
@@ -87,7 +92,7 @@ public class TankDrift extends LinearOpMode {
 
     }
 
-    public void initAll(){
+    public void initAll() {
         left = hardwareMap.get(DcMotor.class, "left");
         right = hardwareMap.get(DcMotor.class, "right");
 
@@ -99,8 +104,8 @@ public class TankDrift extends LinearOpMode {
         voltageSensor = hardwareMap.voltageSensor.iterator().next();
     }
 
-    public void rotate(boolean right){
-        if (right){
+    public void rotate(boolean right) {
+        if (right) {
             this.left.setPower(1);
             this.right.setPower(-1);
         } else {
@@ -109,17 +114,17 @@ public class TankDrift extends LinearOpMode {
         }
     }
 
-    public void power(double lp, double rp){
+    public void power(double lp, double rp) {
         this.left.setPower(lp);
         this.right.setPower(rp);
     }
 
-    public void stopMotor(){
+    public void stopMotor() {
         this.left.setPower(0);
         this.right.setPower(0);
     }
 
-    public void update(){
+    public void update() {
         telemetry.addData("V", voltageSensor.getVoltage());
         telemetry.update();
 
