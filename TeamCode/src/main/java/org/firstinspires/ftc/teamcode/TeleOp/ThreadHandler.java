@@ -6,7 +6,7 @@ public class ThreadHandler {
     public static boolean FOUND = false;
 
     // SOMETIMES SHIT GETS TRUE
-    public static boolean RANDOM_BOOLEAN = false;
+    public static boolean RANDOM_BOOLEAN = true;
 
     public static boolean HARD_STOP = false;
 

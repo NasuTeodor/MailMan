@@ -2,16 +2,34 @@ package org.firstinspires.ftc.teamcode.TeleOp;
 
 import static org.firstinspires.ftc.teamcode.TeleOp.ThreadHandler.*;
 
+import android.util.Size;
+
+import com.acmerobotics.dashboard.FtcDashboard;
+import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.VoltageSensor;
 
+import org.firstinspires.ftc.robotcore.external.hardware.camera.BuiltinCameraDirection;
+import org.firstinspires.ftc.robotcore.external.hardware.camera.controls.ExposureControl;
+import org.firstinspires.ftc.robotcore.external.hardware.camera.controls.FocusControl;
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.vision.VisionPortal;
+import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
+import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
+
 @TeleOp
 public class TankDrift extends LinearOpMode {
     DcMotor left, right;
     VoltageSensor voltageSensor;
+
+    VisionPortal visionPortal;
+    AprilTagProcessor aprilTagProcessor;
+    FocusControl focusControl;
+    ExposureControl exposureControl;
 
     Thread arm_rise, arm_lower, arm_stop;
 
@@ -25,9 +43,20 @@ public class TankDrift extends LinearOpMode {
     @Override
     public void runOpMode() throws InterruptedException {
 
-        double drive, turn, left, right = 0;
+        double drive, turn, left, right;
 
         initAll();
+
+//        // EXPERIMENTAL
+//        APARENT "GETTING CONTROLS IS ONLY SUPPORTED FOR WEBCAMS"
+//        while(visionPortal.getCameraState() != VisionPortal.CameraState.STREAMING) {
+//            int a = 0;
+//        }
+//        focusControl = visionPortal.getCameraControl(FocusControl.class);
+//        exposureControl = visionPortal.getCameraControl(ExposureControl.class);
+//
+//        focusControl.setMode(FocusControl.Mode.ContinuousAuto);
+//        exposureControl.setMode(ExposureControl.Mode.ContinuousAuto);
 
         waitForStart();
 
@@ -75,17 +104,14 @@ public class TankDrift extends LinearOpMode {
 
             }
 
-//            OPRESTE TOATE MOTOARELE DACA NIMIC NU ESTE ACTIONAT
-//            OPRESTE TOT DACA APESI PE A
-
-            if (gamepad1.a)
+//          OPRESTE TOATE MOTOARELE DACA NIMIC NU ESTE ACTIONAT
+//          OPRESTE TOT DACA APESI PE A
+            while (gamepad1.a)
                 stopMotor();
-            if (
-                    !l_bumper && !r_bumper
-                            && l_joystick == 0 && r_joystick == 0
-                            && l_trigger == 0 && r_trigger == 0
-                            && !gamepad1.dpad_down && !gamepad1.dpad_up
-            )
+            if (!l_bumper && !r_bumper
+                    && l_joystick == 0 && r_joystick == 0
+                    && l_trigger == 0 && r_trigger == 0
+                    && !gamepad1.dpad_down && !gamepad1.dpad_up)
                 stopMotor();
 
         }
@@ -102,6 +128,21 @@ public class TankDrift extends LinearOpMode {
         left.setDirection(DcMotorSimple.Direction.REVERSE);
 
         voltageSensor = hardwareMap.voltageSensor.iterator().next();
+
+        aprilTagProcessor = new AprilTagProcessor.Builder()
+//                .setDrawCubeProjection(true)
+//                .setDrawTagID(true)
+//                .setLensIntrinsics(3553.31878217, 3553.31878217, 2341.71664461, 1689.28387843)
+                .setOutputUnits(DistanceUnit.CM, AngleUnit.DEGREES)
+                .build();
+        aprilTagProcessor.setDecimation(1); // lower fps
+
+        VisionPortal.Builder builder = new VisionPortal.Builder();
+        builder.setCamera(BuiltinCameraDirection.BACK);
+//        builder.setCameraResolution(new Size(1920, 1080));
+        builder.enableLiveView(true);
+        builder.addProcessor(aprilTagProcessor);
+        visionPortal = builder.build();
     }
 
     public void rotate(boolean right) {
@@ -137,4 +178,5 @@ public class TankDrift extends LinearOpMode {
         this.l_bumper = gamepad1.left_bumper;
         this.r_bumper = gamepad1.right_bumper;
     }
+
 }
