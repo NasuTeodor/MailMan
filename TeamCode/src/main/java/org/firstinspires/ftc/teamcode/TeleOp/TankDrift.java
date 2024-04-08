@@ -2,10 +2,8 @@ package org.firstinspires.ftc.teamcode.TeleOp;
 
 import static org.firstinspires.ftc.teamcode.TeleOp.ThreadHandler.*;
 
-import android.util.Size;
+import android.widget.TableRow;
 
-import com.acmerobotics.dashboard.FtcDashboard;
-import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -18,12 +16,11 @@ import org.firstinspires.ftc.robotcore.external.hardware.camera.controls.FocusCo
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.vision.VisionPortal;
-import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 
 @TeleOp
 public class TankDrift extends LinearOpMode {
-    DcMotor left, right;
+    DcMotor left, right, arm;
     VoltageSensor voltageSensor;
 
     VisionPortal visionPortal;
@@ -31,12 +28,12 @@ public class TankDrift extends LinearOpMode {
     FocusControl focusControl;
     ExposureControl exposureControl;
 
-    Thread arm_rise, arm_lower, arm_stop;
+    Docking docking;
+    Thread dockerThread;
 
-    double lp, rp = 0;
-    double l_joystick, r_joystick = 0;
-    double l_trigger, r_trigger = 0;
-    boolean l_bumper, r_bumper = false;
+    double l_joystick, r_joystick;
+    double l_trigger, r_trigger;
+    boolean l_bumper, r_bumper;
 
     double move_power = 1;
 
@@ -46,6 +43,8 @@ public class TankDrift extends LinearOpMode {
         double drive, turn, left, right;
 
         initAll();
+
+        update();
 
 //        // EXPERIMENTAL
 //        APARENT "GETTING CONTROLS IS ONLY SUPPORTED FOR WEBCAMS"
@@ -62,9 +61,15 @@ public class TankDrift extends LinearOpMode {
 
         while (opModeIsActive()) {
 
+            if (gamepad1.x)
+                THREAD_SHOULD_CLOSE = true;
+
+            if(gamepad1.y)
+                DOCK_ACTIVE = !DOCK_ACTIVE;
+
             update();
 
-            if (!FOUND) {
+            if (!DOCK_FOUND) {
 
                 if (l_joystick != 0 || r_joystick != 0) {
                     update();
@@ -84,9 +89,10 @@ public class TankDrift extends LinearOpMode {
                 }
 
                 if (l_trigger != 0 || r_trigger != 0) {
-                    power(l_trigger, r_trigger);
+                    move_arm(l_trigger, r_trigger);
                     update();
-                }
+                } else
+                    arm.setPower(0);
 
                 if (l_bumper || r_bumper) {
                     update();
@@ -95,7 +101,6 @@ public class TankDrift extends LinearOpMode {
                     else if (l_bumper)
                         rotate(false);
                 }
-
 
                 if (gamepad1.dpad_up)
                     power(move_power, move_power);
@@ -114,35 +119,55 @@ public class TankDrift extends LinearOpMode {
                     && !gamepad1.dpad_down && !gamepad1.dpad_up)
                 stopMotor();
 
-        }
+            if (isStopRequested()) {
+                THREAD_SHOULD_CLOSE = true;
+                dockerThread.join(10);
+            }
 
+        }
+        dockerThread.join(0);
     }
 
     public void initAll() {
+        THREAD_SHOULD_CLOSE = false;
+
         left = hardwareMap.get(DcMotor.class, "left");
         right = hardwareMap.get(DcMotor.class, "right");
+        arm = hardwareMap.get(DcMotor.class, "arm");
 
         left.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         right.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        arm.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         left.setDirection(DcMotorSimple.Direction.REVERSE);
 
         voltageSensor = hardwareMap.voltageSensor.iterator().next();
 
-        aprilTagProcessor = new AprilTagProcessor.Builder()
-//                .setDrawCubeProjection(true)
-//                .setDrawTagID(true)
-//                .setLensIntrinsics(3553.31878217, 3553.31878217, 2341.71664461, 1689.28387843)
-                .setOutputUnits(DistanceUnit.CM, AngleUnit.DEGREES)
-                .build();
-        aprilTagProcessor.setDecimation(1); // lower fps
+        docking = new Docking(this.left, this.right, this.arm, this.aprilTagProcessor, this.visionPortal);
+        dockerThread = new Thread(docking);
+        dockerThread.start();
 
-        VisionPortal.Builder builder = new VisionPortal.Builder();
-        builder.setCamera(BuiltinCameraDirection.BACK);
-//        builder.setCameraResolution(new Size(1920, 1080));
-        builder.enableLiveView(true);
-        builder.addProcessor(aprilTagProcessor);
-        visionPortal = builder.build();
+//        aprilTagProcessor = new AprilTagProcessor.Builder()
+////                .setDrawCubeProjection(true)
+////                .setDrawTagID(true)
+////                .setLensIntrinsics(3553.31878217, 3553.31878217, 2341.71664461, 1689.28387843)
+//                .setOutputUnits(DistanceUnit.CM, AngleUnit.DEGREES)
+//                .build();
+//        aprilTagProcessor.setDecimation(1); // lower fps
+
+//        VisionPortal.Builder builder = new VisionPortal.Builder();
+//        builder.setCamera(BuiltinCameraDirection.BACK);
+////        builder.setCameraResolution(new Size(1920, 1080));
+//        builder.enableLiveView(true);
+//        builder.addProcessor(aprilTagProcessor);
+//        visionPortal = builder.build();
+    }
+
+    public void move_arm(double l_trigger, double r_trigger){
+        double left = Math.abs(l_trigger);
+        double right = Math.abs(r_trigger);
+        double power = right - left;
+        arm.setPower(power);
     }
 
     public void rotate(boolean right) {
@@ -167,6 +192,9 @@ public class TankDrift extends LinearOpMode {
 
     public void update() {
         telemetry.addData("V", voltageSensor.getVoltage());
+        telemetry.addData("DOCKING ACTIVE", DOCK_ACTIVE);
+        if (dockerThread != null)
+            telemetry.addData("THREAD", dockerThread.getState());
         telemetry.update();
 
         this.l_joystick = gamepad1.left_stick_y;
