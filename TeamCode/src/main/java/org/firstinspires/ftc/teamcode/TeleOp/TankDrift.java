@@ -4,10 +4,12 @@ import static org.firstinspires.ftc.teamcode.TeleOp.ThreadHandler.*;
 
 import android.widget.TableRow;
 
+import com.acmerobotics.dashboard.config.Config;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.VoltageSensor;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.BuiltinCameraDirection;
@@ -18,10 +20,13 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 
+@Config
 @TeleOp
 public class TankDrift extends LinearOpMode {
     DcMotor left, right, arm;
     VoltageSensor voltageSensor;
+
+    Servo gheara;
 
     VisionPortal visionPortal;
     AprilTagProcessor aprilTagProcessor;
@@ -36,6 +41,8 @@ public class TankDrift extends LinearOpMode {
     boolean l_bumper, r_bumper;
 
     double move_power = 1;
+    public static double open = 1;
+    public static double close = -1;
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -64,8 +71,14 @@ public class TankDrift extends LinearOpMode {
             if (gamepad1.x)
                 THREAD_SHOULD_CLOSE = true;
 
-            if(gamepad1.y)
+            if (gamepad1.y)
                 DOCK_ACTIVE = !DOCK_ACTIVE;
+
+            if (gamepad2.x) {
+                gheara.setPosition(open);
+            } else if (gamepad2.y) {
+                gheara.setPosition(close);
+            }
 
             update();
 
@@ -135,6 +148,8 @@ public class TankDrift extends LinearOpMode {
         right = hardwareMap.get(DcMotor.class, "right");
         arm = hardwareMap.get(DcMotor.class, "arm");
 
+        gheara = hardwareMap.get(Servo.class, "servus");
+
         left.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         right.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         arm.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
@@ -163,7 +178,7 @@ public class TankDrift extends LinearOpMode {
 //        visionPortal = builder.build();
     }
 
-    public void move_arm(double l_trigger, double r_trigger){
+    public void move_arm(double l_trigger, double r_trigger) {
         double left = Math.abs(l_trigger);
         double right = Math.abs(r_trigger);
         double power = right - left;
@@ -200,8 +215,8 @@ public class TankDrift extends LinearOpMode {
         this.l_joystick = gamepad1.left_stick_y;
         this.r_joystick = gamepad1.right_stick_x;
 
-        this.l_trigger = gamepad1.left_trigger;
-        this.r_trigger = gamepad1.right_trigger;
+        this.l_trigger = gamepad2.left_trigger;
+        this.r_trigger = gamepad2.right_trigger;
 
         this.l_bumper = gamepad1.left_bumper;
         this.r_bumper = gamepad1.right_bumper;
